@@ -44,11 +44,13 @@ if(DEFINED GLIBCXX_USE_CXX11_ABI)
   if(${GLIBCXX_USE_CXX11_ABI} EQUAL 1)
     set(CXX_STANDARD_REQUIRED ON)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=1")
+  else()
     # Please note this is required in order to ensure compatibility between gcc 9 and gcc 7
     # This needs to be removed when we stop compiling with gcc 7
     string(APPEND CMAKE_CXX_FLAGS " -fabi-version=11")
   endif()
 endif()
+
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
