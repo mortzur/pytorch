@@ -5,6 +5,10 @@ import unittest
 from torch.ao.quantization.experimental.observer import APoTObserver
 from torch.ao.quantization.experimental.quantizer import quantize_APoT, dequantize_APoT
 from torch.ao.quantization.experimental.fake_quantize import APoTFakeQuantize
+from torch.ao.quantization.experimental.fake_quantize_helper import fake_quantize_helper
+forward_helper = fake_quantize_helper.forward
+backward = fake_quantize_helper.backward
+from torch.autograd import gradcheck
 
 class TestFakeQuantize(unittest.TestCase):
     r""" Tests fake quantize calculate_qparams() method
@@ -51,7 +55,7 @@ class TestFakeQuantize(unittest.TestCase):
         X_reduced_precision_fp = apot_fake.forward(torch.clone(X), False)
 
         # get X_expected by converting fp -> apot -> fp to simulate quantize -> dequantize
-        X_to_apot = quantize_APoT(X, alpha, gamma, quantization_levels, level_indices)
+        X_to_apot, mask = quantize_APoT(X, alpha, gamma, quantization_levels, level_indices)
         X_expected = dequantize_APoT(X_to_apot)
 
         self.assertTrue(torch.equal(X_reduced_precision_fp, X_expected))
@@ -71,6 +75,18 @@ class TestFakeQuantize(unittest.TestCase):
 
         with self.assertRaises(Exception):
             apot_fake.forward(torch.clone(X), False)
+
+    r""" Tests fake quantize helper backward() method
+         using torch.autograd.gradcheck function.
+    """
+    def test_backward(self):
+        input = torch.randn(20, dtype=torch.double, requires_grad=True)
+
+        observer = APoTObserver(b=4, k=2)
+        observer.forward(input)
+        alpha, gamma, quantization_levels, level_indices = observer.calculate_qparams(signed=False)
+
+        test = gradcheck(fake_quantize_helper.apply, (input, alpha, gamma, quantization_levels, level_indices), atol=1e-4)
 
 if __name__ == '__main__':
     unittest.main()
